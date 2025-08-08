@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
-
+sys.stdout.reconfigure(encoding='utf-8')
 
 class ImageJsonViewer(QWidget):
     def __init__(self, folder):
