@@ -36,7 +36,6 @@ class ImageJsonViewer(QWidget):
 
         # --- Свой фон для всего окна (в PaintEvent мы также рисуем фон) ---
         self.setStyleSheet("""
-            QWidget { background-color: #000000; color: #FFFFFF; }
             QLabel { color: #FFFFFF; }
             QLineEdit, QComboBox, QSpinBox, QListWidget, QTextEdit {
                 background-color: #1e1e1e;
@@ -250,10 +249,9 @@ class ImageJsonViewer(QWidget):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    # Глобальная тёмная тема для приложения: фон — чёрный, весь текст — белый,
-    # поля ввода и списки — тёмно-серые для удобства чтения.
+    # Глобальная тёмная тема: только белый текст, фон задаётся paintEvent
     app.setStyleSheet("""
-        QWidget { background-color: #000000; color: #FFFFFF; }
+        QWidget { color: #FFFFFF; }
         QLabel { color: #FFFFFF; }
         QLineEdit, QComboBox, QSpinBox, QListWidget, QTextEdit {
             background-color: #1e1e1e;
@@ -280,4 +278,6 @@ if __name__ == "__main__":
     if folder:
         viewer = ImageJsonViewer(folder)
         viewer.show()
+        sys.exit(app.exec())
+        sys.exit(app.exec())
         sys.exit(app.exec())
