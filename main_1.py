@@ -6,11 +6,10 @@ from PyQt6.QtWidgets import (
     QListWidget, QListWidgetItem, QFormLayout, QLineEdit,
     QPushButton, QFileDialog, QScrollArea, QComboBox, QSpinBox
 )
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QPushButton
-from PyQt6.QtGui import QPainter, QColor, QMouseEvent
-from PyQt6.QtCore import QPoint
+from PyQt6.QtGui import QPixmap, QAction
+from PyQt6.QtCore import Qt, QPoint
+from PyQt6.QtGui import QPainter, QBrush, QColor
+
 sys.stdout.reconfigure(encoding='utf-8')
 
 class ImageJsonViewer(QWidget):
@@ -24,19 +23,69 @@ class ImageJsonViewer(QWidget):
         self.setWindowTitle("Image + JSON Viewer")
         self.resize(1200, 800)
 
-        # Для всего окна
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)  # убираем рамку, если нужно
-        
-        # Для центрального виджета
+        # --- Убираем системные нав элементы ---
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint |  # убирает стандартную рамку окна
+            Qt.WindowType.Window  # обычное окно без рамок
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)  # прозрачный фон окна
+
+        # --- Свой фон для всего окна ---
         self.setStyleSheet("""
-            QWidget {
-                background-color: rgba(0, 0, 0, 200);  /* чёрный с прозрачностью */
+            ImageJsonViewer {
+                background-color: rgba(0, 0, 0, 220);
+                border-radius: 10px;
             }
         """)
 
-        # --- Главное расположение ---
-        main_layout = QVBoxLayout(self)
+        # --- Создаём собственную шапку окна с кнопкой закрытия ---
+        self.title_bar = QWidget(self)
+        self.title_bar.setFixedHeight(40)
+        self.title_bar.setStyleSheet("""
+            background-color: rgba(30, 30, 30, 240);
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        """)
+        title_layout = QHBoxLayout(self.title_bar)
+        title_layout.setContentsMargins(10, 0, 10, 0)
+
+        # Заголовок в шапке
+        self.title_label = QLabel("Image + JSON Viewer", self.title_bar)
+        self.title_label.setStyleSheet("color: white; font-weight: bold;")
+        title_layout.addWidget(self.title_label)
+
+        # Спейсер, чтобы кнопка была справа
+        title_layout.addStretch()
+
+        # Кнопка закрытия окна
+        self.close_button = QPushButton("✖", self.title_bar)
+        self.close_button.setFixedSize(30, 30)
+        self.close_button.setStyleSheet("""
+            QPushButton {
+                color: white;
+                background-color: transparent;
+                border: none;
+                font-size: 16px;
+            }
+            QPushButton:hover {
+                background-color: red;
+            }
+        """)
+        self.close_button.clicked.connect(self.close)
+        title_layout.addWidget(self.close_button)
+
+        # --- Главное расположение без учёта системного заголовка ---
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setSpacing(0)
+
+        self.main_layout.addWidget(self.title_bar)
+
+        # Основной виджет с содержимым — обернём в QWidget для удобства стилей и управления
+        self.content_widget = QWidget(self)
+        self.content_layout = QVBoxLayout(self.content_widget)
+        self.content_layout.setContentsMargins(10, 10, 10, 10)
+        self.content_layout.setSpacing(10)
 
         # Верхняя часть (изображение + JSON-редактор)
         top_layout = QHBoxLayout()
@@ -45,6 +94,7 @@ class ImageJsonViewer(QWidget):
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.image_label.setFixedSize(800, 600)
+        self.image_label.setStyleSheet("background-color: black; border-radius: 8px;")
 
         # Справа: редактор JSON
         self.form_layout = QFormLayout()
@@ -68,14 +118,33 @@ class ImageJsonViewer(QWidget):
 
         # Кнопка сохранить
         save_button = QPushButton("💾 Сохранить JSON")
+        save_button.setFixedHeight(40)
         save_button.clicked.connect(self.save_json)
 
-        main_layout.addLayout(top_layout)
-        main_layout.addWidget(self.image_list)
-        main_layout.addWidget(save_button)
+        self.content_layout.addLayout(top_layout)
+        self.content_layout.addWidget(self.image_list)
+        self.content_layout.addWidget(save_button)
+
+        self.main_layout.addWidget(self.content_widget)
 
         if self.images:
             self.load_image(self.images[0])
+
+        # Для перетаскивания окна мышью по шапке
+        self.offset = None
+
+    # Перетаскивание окна за шапку
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            if self.title_bar.geometry().contains(event.pos()):
+                self.offset = event.pos()
+
+    def mouseMoveEvent(self, event):
+        if self.offset is not None:
+            self.move(self.pos() + event.pos() - self.offset)
+
+    def mouseReleaseEvent(self, event):
+        self.offset = None
 
     def load_image(self, filename):
         self.current_image = filename
@@ -99,14 +168,12 @@ class ImageJsonViewer(QWidget):
         self.update_form()
 
     def update_form(self):
-        # Удаляем старые поля
         while self.form_layout.count():
             item = self.form_layout.takeAt(0)
             widget = item.widget()
             if widget:
                 widget.deleteLater()
 
-        # Создаем новые поля
         for key, value in self.json_data.items():
             if isinstance(value, str):
                 field = QLineEdit(value)
@@ -124,6 +191,18 @@ class ImageJsonViewer(QWidget):
 
             field.setObjectName(key)
             self.form_layout.addRow(key, field)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        rect = self.rect()
+
+        # Фон — чёрный с прозрачностью и скруглённые углы
+        color = QColor(0, 0, 0, 220)  # чёрный с прозрачностью
+        brush = QBrush(color)
+        painter.setBrush(brush)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawRoundedRect(rect, 10, 10)  # радиус скругления 10
 
     def save_json(self):
         for i in range(self.form_layout.count()):
