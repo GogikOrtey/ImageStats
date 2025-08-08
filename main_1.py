@@ -12,6 +12,10 @@ from PyQt6.QtGui import QPainter, QBrush, QColor
 
 sys.stdout.reconfigure(encoding='utf-8')
 
+"""
+Этот код реализует редактор для просмотра изображений, и json нотификаций для них
+"""
+
 class ImageJsonViewer(QWidget):
     def __init__(self, folder):
         super().__init__()
@@ -30,12 +34,29 @@ class ImageJsonViewer(QWidget):
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)  # прозрачный фон окна
 
-        # --- Свой фон для всего окна ---
+        # --- Свой фон для всего окна (в PaintEvent мы также рисуем фон) ---
         self.setStyleSheet("""
-            ImageJsonViewer {
-                background-color: rgba(0, 0, 0, 220);
-                border-radius: 10px;
+            QWidget { background-color: #000000; color: #FFFFFF; }
+            QLabel { color: #FFFFFF; }
+            QLineEdit, QComboBox, QSpinBox, QListWidget, QTextEdit {
+                background-color: #1e1e1e;
+                color: #FFFFFF;
+                border: 1px solid #2e2e2e;
+                border-radius: 6px;
+                padding: 4px;
             }
+            QPushButton {
+                background-color: transparent;
+                color: #FFFFFF;
+                border: 1px solid #2e2e2e;
+                padding: 6px 10px;
+                border-radius: 6px;
+            }
+            QPushButton:hover { background-color: rgba(255,255,255,0.03); }
+            QListWidget { background-color: transparent; }
+            QListWidget::item { color: #FFFFFF; }
+            QListWidget::item:selected { background-color: #303030; }
+            QScrollArea { background-color: transparent; }
         """)
 
         # --- Создаём собственную шапку окна с кнопкой закрытия ---
@@ -190,7 +211,9 @@ class ImageJsonViewer(QWidget):
                 field = QLineEdit(str(value))
 
             field.setObjectName(key)
-            self.form_layout.addRow(key, field)
+            # Дополнительная настройка полей — чтобы гарантировать белый текст на тёмном фоне
+            field.setStyleSheet("")
+            self.form_layout.addRow(QLabel(key), field)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -206,6 +229,7 @@ class ImageJsonViewer(QWidget):
 
     def save_json(self):
         for i in range(self.form_layout.count()):
+            # form_layout stores rows as (label, field) pairs; .itemAt(i) returns a QLayoutItem
             item = self.form_layout.itemAt(i).widget()
             if isinstance(item, QLineEdit):
                 self.json_data[item.objectName()] = item.text()
@@ -225,6 +249,32 @@ class ImageJsonViewer(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+
+    # Глобальная тёмная тема для приложения: фон — чёрный, весь текст — белый,
+    # поля ввода и списки — тёмно-серые для удобства чтения.
+    app.setStyleSheet("""
+        QWidget { background-color: #000000; color: #FFFFFF; }
+        QLabel { color: #FFFFFF; }
+        QLineEdit, QComboBox, QSpinBox, QListWidget, QTextEdit {
+            background-color: #1e1e1e;
+            color: #FFFFFF;
+            border: 1px solid #2e2e2e;
+            border-radius: 6px;
+            padding: 4px;
+        }
+        QPushButton {
+            background-color: transparent;
+            color: #FFFFFF;
+            border: 1px solid #2e2e2e;
+            padding: 6px 10px;
+            border-radius: 6px;
+        }
+        QPushButton:hover { background-color: rgba(255,255,255,0.03); }
+        QListWidget { background-color: transparent; }
+        QListWidget::item { color: #FFFFFF; }
+        QListWidget::item:selected { background-color: #303030; }
+        QScrollArea { background-color: transparent; }
+    """)
 
     folder = QFileDialog.getExistingDirectory(None, "Выбери папку с изображениями и JSON")
     if folder:
