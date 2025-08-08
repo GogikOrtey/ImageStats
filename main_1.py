@@ -8,6 +8,9 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QPushButton
+from PyQt6.QtGui import QPainter, QColor, QMouseEvent
+from PyQt6.QtCore import QPoint
 sys.stdout.reconfigure(encoding='utf-8')
 
 class ImageJsonViewer(QWidget):
@@ -20,6 +23,17 @@ class ImageJsonViewer(QWidget):
 
         self.setWindowTitle("Image + JSON Viewer")
         self.resize(1200, 800)
+
+        # Для всего окна
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)  # убираем рамку, если нужно
+        
+        # Для центрального виджета
+        self.setStyleSheet("""
+            QWidget {
+                background-color: rgba(0, 0, 0, 200);  /* чёрный с прозрачностью */
+            }
+        """)
 
         # --- Главное расположение ---
         main_layout = QVBoxLayout(self)
