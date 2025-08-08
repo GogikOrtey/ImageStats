@@ -74,8 +74,25 @@ class ImageJsonViewer(QWidget):
         self.title_label.setStyleSheet("color: white; font-weight: bold;")
         title_layout.addWidget(self.title_label)
 
-        # Спейсер, чтобы кнопка была справа
+        # Спейсер, чтобы кнопки были справа
         title_layout.addStretch()
+
+        # Кнопка переключения темы
+        self.theme_button = QPushButton("🌙", self.title_bar)
+        self.theme_button.setFixedSize(30, 30)
+        self.theme_button.setStyleSheet("""
+            QPushButton {
+                color: white;
+                background-color: transparent;
+                border: none;
+                font-size: 16px;
+            }
+            QPushButton:hover {
+                background-color: #444444;
+            }
+        """)
+        self.theme_button.clicked.connect(self.toggle_theme)
+        title_layout.addWidget(self.theme_button)
 
         # Кнопка закрытия окна
         self.close_button = QPushButton("✖", self.title_bar)
@@ -120,6 +137,7 @@ class ImageJsonViewer(QWidget):
         self.form_layout = QFormLayout()
         self.form_widget = QWidget()
         self.form_widget.setLayout(self.form_layout)
+        self.form_widget.setStyleSheet("background: transparent;")  # прозрачный фон для формы
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -152,6 +170,9 @@ class ImageJsonViewer(QWidget):
 
         # Для перетаскивания окна мышью по шапке
         self.offset = None
+
+        # Состояние темы
+        self.is_dark_theme = True
 
     # Перетаскивание окна за шапку
     def mousePressEvent(self, event):
@@ -218,13 +239,16 @@ class ImageJsonViewer(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         rect = self.rect()
-
-        # Фон — чёрный с прозрачностью и скруглённые углы
-        color = QColor(0, 0, 0, 220)  # чёрный с прозрачностью
+        if self.is_dark_theme:
+            # Фон — чёрный с прозрачностью и скруглённые углы
+            color = QColor(0, 0, 0, 220)
+        else:
+            # Фон — белый, непрозрачный
+            color = QColor(255, 255, 255, 255)
         brush = QBrush(color)
         painter.setBrush(brush)
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawRoundedRect(rect, 10, 10)  # радиус скругления 10
+        painter.drawRoundedRect(rect, 10, 10)
 
     def save_json(self):
         for i in range(self.form_layout.count()):
@@ -245,11 +269,147 @@ class ImageJsonViewer(QWidget):
     def on_image_selected(self, item):
         self.load_image(item.text())
 
+    def toggle_theme(self):
+        if self.is_dark_theme:
+            # Светлая тема
+            self.setWindowFlags(
+                Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window
+            )
+            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
+            
+            # Применяем стили ко всем виджетам, включая вложенные
+            self.setStyleSheet("""
+                QWidget, QLabel { color: #000000; }
+                QLineEdit, QComboBox, QSpinBox, QListWidget, QTextEdit {
+                    background-color: #ffffff;
+                    color: #000000;
+                    border: 1px solid #cccccc;
+                    border-radius: 6px;
+                    padding: 4px;
+                }
+                QPushButton {
+                    background-color: transparent;
+                    color: #000000;
+                    border: 1px solid #cccccc;
+                    padding: 6px 10px;
+                    border-radius: 6px;
+                }
+                QPushButton:hover { background-color: #f0f0f0; }
+                QListWidget { background-color: transparent; }
+                QListWidget::item { color: #000000; }
+                QListWidget::item:selected { background-color: #e0e0e0; }
+                QScrollArea { 
+                    background-color: transparent;
+                    color: #000000;
+                }
+            """)
+            
+            # Обновляем форму с новыми стилями
+            self.form_widget.setStyleSheet("""
+                QWidget { 
+                    color: #000000;
+                    background: transparent;
+                }
+                QLabel { color: #000000; }
+            """)
+
+            # --- Шапка окна — светлая тема
+            self.title_bar.setStyleSheet("""
+                background-color: rgba(255, 255, 255, 240);
+                border-top-left-radius: 10px;
+                border-top-right-radius: 10px;
+            """)
+            self.title_label.setStyleSheet("color: black; font-weight: bold;")
+            self.theme_button.setStyleSheet("""
+                QPushButton {
+                    color: black;
+                    background-color: transparent;
+                    border: none;
+                    font-size: 16px;
+                }
+                QPushButton:hover {
+                    background-color: #dddddd;
+                }
+            """)
+            self.close_button.setStyleSheet("""
+                QPushButton {
+                    color: black;
+                    background-color: transparent;
+                    border: none;
+                    font-size: 16px;
+                }
+                QPushButton:hover {
+                    background-color: red;
+                }
+            """)
+        else:
+            # Тёмная тема: полупрозрачный чёрный фон, белый текст, тёмная шапка
+            self.setWindowFlags(
+                Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window
+            )
+            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+            QApplication.instance().setStyleSheet("""
+                QWidget { color: #FFFFFF; }
+                QLabel { color: #FFFFFF; }
+                QLineEdit, QComboBox, QSpinBox, QListWidget, QTextEdit {
+                    background-color: #1e1e1e;
+                    color: #FFFFFF;
+                    border: 1px solid #2e2e2e;
+                    border-radius: 6px;
+                    padding: 4px;
+                }
+                QPushButton {
+                    background-color: transparent;
+                    color: #FFFFFF;
+                    border: 1px solid #2e2e2e;
+                    padding: 6px 10px;
+                    border-radius: 6px;
+                }
+                QPushButton:hover { background-color: rgba(255,255,255,0.03); }
+                QListWidget { background-color: transparent; }
+                QListWidget::item { color: #FFFFFF; }
+                QListWidget::item:selected { background-color: #303030; }
+                QScrollArea { background-color: transparent; }
+            """)
+            self.theme_button.setText("🌙")
+            # Тёмная шапка и белый текст
+            self.title_bar.setStyleSheet("""
+                background-color: rgba(30, 30, 30, 240);
+                border-top-left-radius: 10px;
+                border-top-right-radius: 10px;
+            """)
+            self.title_label.setStyleSheet("color: white; font-weight: bold;")
+            self.theme_button.setStyleSheet("""
+                QPushButton {
+                    color: white;
+                    background-color: transparent;
+                    border: none;
+                    font-size: 16px;
+                }
+                QPushButton:hover {
+                    background-color: #444444;
+                }
+            """)
+            self.close_button.setStyleSheet("""
+                QPushButton {
+                    color: white;
+                    background-color: transparent;
+                    border: none;
+                    font-size: 16px;
+                }
+                QPushButton:hover {
+                    background-color: red;
+                }
+            """)
+        self.is_dark_theme = not self.is_dark_theme
+        self.show()
+        # Принудительно обновляем стили формы
+        self.update_form()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    # Глобальная тёмная тема: только белый текст, фон задаётся paintEvent
+    # По умолчанию — тёмная тема
     app.setStyleSheet("""
         QWidget { color: #FFFFFF; }
         QLabel { color: #FFFFFF; }
@@ -278,6 +438,4 @@ if __name__ == "__main__":
     if folder:
         viewer = ImageJsonViewer(folder)
         viewer.show()
-        sys.exit(app.exec())
-        sys.exit(app.exec())
         sys.exit(app.exec())
